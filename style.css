@@ -1064,3 +1064,234 @@ textarea:focus {
   }
 }
 
+/* --- Dynamic Multi-Account & Copy Interaction Styles --- */
+
+/* Modal Accounts Section */
+.accounts-section {
+  border-top: 1px dashed var(--border-color);
+  padding-top: 1rem;
+  margin-top: 0.5rem;
+}
+
+.accounts-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.accounts-section-header label {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.accounts-rows-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-height: 240px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+/* Dynamic Account Row Item Card */
+.account-row-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.85rem;
+  background-color: var(--bg-banner);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  position: relative;
+  transition: var(--transition-smooth);
+  animation: slide-down 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.account-row-item:hover {
+  border-color: var(--text-muted);
+}
+
+.account-row-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-body);
+}
+
+.account-row-title {
+  color: var(--color-primary);
+  font-family: 'Outfit', sans-serif;
+}
+
+.btn-remove-account-row {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0.2rem;
+  font-size: 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition-smooth);
+}
+
+.btn-remove-account-row:hover {
+  color: var(--color-holiday);
+  transform: scale(1.15);
+}
+
+.account-row-body {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.5rem;
+}
+
+@media (min-width: 380px) {
+  .account-row-body {
+    grid-template-columns: 1fr 1.6fr;
+  }
+}
+
+.account-row-body select,
+.account-row-body input[type="text"] {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+  border-radius: 6px;
+  background-color: var(--bg-card);
+}
+
+/* Copy to Clipboard Actions */
+.cell-account-types {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.cell-account-numbers {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.copyable-account {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  padding: 0.15rem 0.35rem;
+  border-radius: 4px;
+  background-color: transparent;
+  color: var(--text-main);
+  transition: var(--transition-smooth);
+  width: fit-content;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 500;
+}
+
+.copyable-account:hover {
+  background-color: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.copyable-account i {
+  font-size: 0.75rem;
+  opacity: 0.5;
+  transition: var(--transition-smooth);
+}
+
+.copyable-account:hover i {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+/* Copy Toast Popups */
+.toast {
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  background-color: var(--color-primary);
+  color: var(--text-white);
+  padding: 0.75rem 1.75rem;
+  border-radius: 30px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  box-shadow: var(--shadow-lg);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.35s ease;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.toast.show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+}
+
+/* Mobile Account Rows Layout */
+.mobile-accounts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 0.3rem 0;
+}
+
+.mobile-account-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+
+.mobile-sub-type {
+  font-weight: 600;
+  color: var(--text-body);
+}
+
+.mobile-sub-number {
+  font-family: 'Outfit', sans-serif;
+  color: var(--text-main);
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  cursor: pointer;
+  padding: 0.1rem 0.3rem;
+  border-radius: 4px;
+  transition: var(--transition-smooth);
+}
+
+.mobile-sub-number:hover {
+  background-color: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.mobile-sub-number i {
+  font-size: 0.7rem;
+  opacity: 0.6;
+}
+
+@keyframes slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+

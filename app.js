@@ -172,8 +172,20 @@ function getAccounts() {
   if (!data) return [];
   try {
     const list = JSON.parse(data);
+    
+    // 하위 호환성: accounts 필드가 없는 구버전 데이터를 다중 계좌 배열 형식으로 마이그레이션
+    const migratedList = list.map(acc => {
+      if (!acc.accounts) {
+        acc.accounts = [{
+          accountType: acc.accountType || '미지정',
+          accountNumber: acc.accountNumber || ''
+        }];
+      }
+      return acc;
+    });
+
     // 개설일 기준 오름차순 정렬
-    return list.sort((a, b) => a.openedDate.localeCompare(b.openedDate));
+    return migratedList.sort((a, b) => a.openedDate.localeCompare(b.openedDate));
   } catch (e) {
     console.error("로컬스토리지 데이터를 파싱하지 못했습니다.", e);
     return [];
@@ -229,9 +241,8 @@ const accountIdInput = document.getElementById("accountId");
 const openedDateInput = document.getElementById("openedDate");
 const brokerSelect = document.getElementById("brokerSelect");
 const brokerInput = document.getElementById("brokerInput");
-const accountTypeSelect = document.getElementById("accountTypeSelect");
-const accountTypeInput = document.getElementById("accountTypeInput");
-const accountNumberInput = document.getElementById("accountNumber");
+const accountsRowsContainer = document.getElementById("accountsRowsContainer");
+const btnAddAccountRow = document.getElementById("btnAddAccountRow");
 const memoInput = document.getElementById("memo");
 const modalTitle = document.getElementById("modalTitle");
 
@@ -257,6 +268,114 @@ document.addEventListener("DOMContentLoaded", () => {
   // 데이터 로드 및 렌더링
   updateApp();
 });
+
+// 동적 계좌 번호 입력 행 추가 함수
+function addAccountRow(type = "", number = "") {
+  const rowCount = accountsRowsContainer.children.length;
+  const rowIndex = rowCount + 1;
+
+  const row = document.createElement("div");
+  row.className = "account-row-item";
+  row.dataset.index = rowIndex;
+
+  // 계좌 종류 프리셋 옵션 생성
+  const types = ["CMA", "위탁", "ISA", "연금저축"];
+  let optionsHtml = `<option value="" disabled ${!type ? "selected" : ""}>선택하세요</option>`;
+  types.forEach(t => {
+    optionsHtml += `<option value="${t}" ${type === t ? "selected" : ""}>${t === "위탁" ? "위탁 (주식)" : t}</option>`;
+  });
+  
+  const isCustomType = type && !types.includes(type);
+  optionsHtml += `<option value="custom" ${isCustomType ? "selected" : ""}>직접 입력...</option>`;
+
+  row.innerHTML = `
+    <div class="account-row-header">
+      <span class="account-row-title"><i class="fa-solid fa-wallet"></i> 계좌 #${rowIndex}</span>
+      <button type="button" class="btn-remove-account-row" onclick="removeAccountRow(this)" title="삭제">
+        <i class="fa-solid fa-trash-can"></i>
+      </button>
+    </div>
+    <div class="account-row-body">
+      <div class="form-group">
+        <select class="row-account-type-select" onchange="handleRowTypeChange(this)" required>
+          ${optionsHtml}
+        </select>
+        <input type="text" class="row-account-type-input hidden-input ${isCustomType ? "show" : ""}" 
+          placeholder="계좌 종류 직접 입력" value="${isCustomType ? type : ""}" ${isCustomType ? 'required="required"' : ""}>
+      </div>
+      <div class="form-group">
+        <input type="text" class="row-account-number" placeholder="계좌번호 입력 (선택)" value="${number}">
+      </div>
+    </div>
+  `;
+
+  accountsRowsContainer.appendChild(row);
+  reindexAccountRows();
+}
+
+// 동적 계좌 번호 입력 행 삭제 함수
+function removeAccountRow(button) {
+  const row = button.closest(".account-row-item");
+  row.remove();
+  reindexAccountRows();
+}
+
+// 동적 행 순서 인덱싱 재정렬 함수
+function reindexAccountRows() {
+  Array.from(accountsRowsContainer.children).forEach((row, idx) => {
+    const titleSpan = row.querySelector(".account-row-title");
+    if (titleSpan) {
+      titleSpan.innerHTML = `<i class="fa-solid fa-wallet"></i> 계좌 #${idx + 1}`;
+    }
+    row.dataset.index = idx + 1;
+  });
+}
+
+// 개별 행 계좌 종류 선택 변경 처리 함수
+function handleRowTypeChange(select) {
+  const row = select.closest(".account-row-item");
+  const input = row.querySelector(".row-account-type-input");
+  if (select.value === "custom") {
+    input.classList.add("show");
+    input.setAttribute("required", "required");
+    input.focus();
+  } else {
+    input.classList.remove("show");
+    input.removeAttribute("required");
+  }
+}
+
+// 간편 클립보드 복사 함수
+function copyToClipboard(text, label = "") {
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => {
+    const displayLabel = label ? `[${label}] ` : "";
+    showToast(`${displayLabel}계좌번호가 복사되었습니다!`);
+  }).catch(err => {
+    console.error("클립보드 복사 실패:", err);
+  });
+}
+
+// 부드러운 애니메이션이 적용된 토스트 팝업 노출 함수
+function showToast(message) {
+  let toast = document.getElementById("copy-toast");
+  if (!toast) {
+    toast = document.createElement("div");
+    toast.id = "copy-toast";
+    toast.className = "toast";
+    document.body.appendChild(toast);
+  }
+  toast.innerHTML = `<i class="fa-solid fa-circle-check"></i> ${message}`;
+  toast.classList.add("show");
+  
+  if (toast.timeoutId) {
+    clearTimeout(toast.timeoutId);
+  }
+  
+  toast.timeoutId = setTimeout(() => {
+    toast.classList.remove("show");
+  }, 2000);
+}
 
 function initEventListeners() {
   // 이전달/다음달 이동
@@ -296,17 +415,10 @@ function initEventListeners() {
       brokerInput.removeAttribute("required");
     }
   });
-  
-  // 계좌종류 직접 입력 처리
-  accountTypeSelect.addEventListener("change", () => {
-    if (accountTypeSelect.value === "custom") {
-      accountTypeInput.classList.add("show");
-      accountTypeInput.setAttribute("required", "required");
-      accountTypeInput.focus();
-    } else {
-      accountTypeInput.classList.remove("show");
-      accountTypeInput.removeAttribute("required");
-    }
+
+  // 동적 계좌 추가 행 버튼 클릭 리스너
+  btnAddAccountRow.addEventListener("click", () => {
+    addAccountRow();
   });
   
   // 폼 제출
@@ -488,12 +600,10 @@ function openModalForAdd(dateStr) {
   brokerInput.classList.remove("show");
   brokerInput.removeAttribute("required");
   
-  accountTypeSelect.value = "";
-  accountTypeInput.value = "";
-  accountTypeInput.classList.remove("show");
-  accountTypeInput.removeAttribute("required");
+  // 동적 행 초기화 및 첫 번째 행 생성
+  accountsRowsContainer.innerHTML = "";
+  addAccountRow();
   
-  accountNumberInput.value = "";
   memoInput.value = "";
   
   btnDeleteAccount.style.display = "none";
@@ -518,20 +628,17 @@ function openModalForEdit(account) {
     brokerInput.setAttribute("required", "required");
   }
   
-  // 계좌종류 프리셋 검사
-  const typeOptions = Array.from(accountTypeSelect.options).map(opt => opt.value);
-  if (typeOptions.includes(account.accountType)) {
-    accountTypeSelect.value = account.accountType;
-    accountTypeInput.classList.remove("show");
-    accountTypeInput.removeAttribute("required");
+  // 동적 행 생성 및 기존 계좌 정보 복원
+  accountsRowsContainer.innerHTML = "";
+  if (account.accounts && account.accounts.length > 0) {
+    account.accounts.forEach(acc => {
+      addAccountRow(acc.accountType, acc.accountNumber);
+    });
   } else {
-    accountTypeSelect.value = "custom";
-    accountTypeInput.value = account.accountType;
-    accountTypeInput.classList.add("show");
-    accountTypeInput.setAttribute("required", "required");
+    // 하위 호환성 폴백
+    addAccountRow(account.accountType || "", account.accountNumber || "");
   }
   
-  accountNumberInput.value = account.accountNumber || "";
   memoInput.value = account.memo || "";
   
   btnDeleteAccount.style.display = "block";
@@ -547,9 +654,6 @@ function openModalForDay(dateStr, existingAccounts) {
     openModalForEdit(existingAccounts[0]);
   } else {
     // 해당 날짜에 여러 계좌가 등록되어 있는 경우, 유저가 선택하게 하거나 목록을 띄우는 프리미엄 조치
-    // 여기서는 깔끔하게 선택용 다이얼로그나 목록 중 첫 번째 항목을 바로 수정하되,
-    // 유저가 다른 계좌들도 볼 수 있는 하단 테이블 뷰로 자연스럽게 시선을 유도하거나
-    // 셀 클릭 시 신규 등록과 기존 수정을 선택할 수 있는 사용자 친화적인 선택 팝업 구현
     const selection = confirm(
       `이 날짜(${dateStr})에는 이미 ${existingAccounts.length}개의 계좌가 등록되어 있습니다.\n\n` +
       `[확인]을 누르면 새 계좌를 추가 등록하고,\n` +
@@ -579,21 +683,45 @@ function handleFormSubmit() {
     broker = brokerInput.value.trim();
   }
   
-  // 계좌종류 추출
-  let accountType = accountTypeSelect.value;
-  if (accountType === "custom") {
-    accountType = accountTypeInput.value.trim();
+  // 동적으로 생성된 다중 계좌 행 데이터 수집
+  const rowElements = document.querySelectorAll(".account-row-item");
+  const accountsData = [];
+  
+  rowElements.forEach(row => {
+    const select = row.querySelector(".row-account-type-select");
+    const customInput = row.querySelector(".row-account-type-input");
+    const numberInput = row.querySelector(".row-account-number");
+    
+    let type = select.value;
+    if (type === "custom") {
+      type = customInput.value.trim();
+    }
+    
+    const number = numberInput.value.trim();
+    
+    if (type) {
+      accountsData.push({
+        accountType: type,
+        accountNumber: number
+      });
+    }
+  });
+
+  if (accountsData.length === 0) {
+    alert("최소 한 개 이상의 계좌 종류를 선택 또는 직접 입력해 주세요.");
+    return;
   }
   
-  const accountNumber = accountNumberInput.value.trim();
   const memo = memoInput.value.trim();
   
+  // 호환성 유지: 단일 필드 계좌정보(첫 번째 값) 및 전체 다중 계좌 배열(accounts) 데이터 구조 빌드
   const accountData = {
     id: id || null,
     openedDate,
     broker,
-    accountType,
-    accountNumber,
+    accountType: accountsData[0].accountType,
+    accountNumber: accountsData[0].accountNumber,
+    accounts: accountsData,
     memo
   };
   
@@ -623,42 +751,75 @@ function renderAccountsTable() {
   }
   
   accounts.forEach(acc => {
-    // [1] 데스크톱용 테이블 렌더링
+    // [1] 데스크톱용 테이블 렌더링 (총 6개 셀을 배치하여 HTML 헤더와 정렬시킵니다)
     const tr = document.createElement("tr");
     
+    // (1) 개설일
     const tdOpened = document.createElement("td");
     tdOpened.textContent = acc.openedDate;
     tr.appendChild(tdOpened);
     
+    // (2) 증권사
     const tdBroker = document.createElement("td");
-    tdBroker.innerHTML = `
-      <span class="table-badge-broker">${acc.broker}</span>
-      <span class="table-badge-type">${acc.accountType}</span>
-    `;
+    tdBroker.innerHTML = `<span class="table-badge-broker">${acc.broker}</span>`;
     tr.appendChild(tdBroker);
     
+    // (3) 계좌종류 (다중 렌더링)
+    const tdType = document.createElement("td");
+    const typeListDiv = document.createElement("div");
+    typeListDiv.className = "cell-account-types";
+    acc.accounts.forEach(sub => {
+      const typeBadge = document.createElement("span");
+      typeBadge.className = "table-badge-type";
+      typeBadge.style.marginLeft = "0";
+      typeBadge.style.display = "block";
+      typeBadge.style.width = "fit-content";
+      typeBadge.textContent = sub.accountType;
+      typeListDiv.appendChild(typeBadge);
+    });
+    tdType.appendChild(typeListDiv);
+    tr.appendChild(tdType);
+    
+    // (4) 계좌번호 (다중 렌더링 및 간편 복사 매핑)
     const tdNumber = document.createElement("td");
-    tdNumber.textContent = acc.accountNumber || "-";
+    const numberListDiv = document.createElement("div");
+    numberListDiv.className = "cell-account-numbers";
+    acc.accounts.forEach(sub => {
+      const copyDiv = document.createElement("div");
+      copyDiv.className = "copyable-account";
+      
+      if (sub.accountNumber) {
+        copyDiv.title = "클릭하여 계좌번호 복사";
+        copyDiv.innerHTML = `<span>${sub.accountNumber}</span> <i class="fa-regular fa-copy"></i>`;
+        copyDiv.addEventListener("click", () => {
+          copyToClipboard(sub.accountNumber, sub.accountType);
+        });
+      } else {
+        copyDiv.innerHTML = `<span style="color: var(--text-muted); font-style: italic;">번호 없음</span>`;
+        copyDiv.style.cursor = "default";
+        copyDiv.style.pointerEvents = "none";
+      }
+      numberListDiv.appendChild(copyDiv);
+    });
+    tdNumber.appendChild(numberListDiv);
     tr.appendChild(tdNumber);
     
+    // (5) 개설가능일
     const tdDday = document.createElement("td");
     const diff = calculateCalendarDaysDiff(acc.nextDueDate, todayStr);
     
     let ddayHtml = "";
-    let ddayText = "";
     if (diff > 0) {
       ddayHtml = `<span class="table-dday-highlight">${acc.nextDueDate} (D-${diff})</span>`;
-      ddayText = `${acc.nextDueDate} (D-${diff})`;
     } else if (diff === 0) {
       ddayHtml = `<span class="table-dday-highlight" style="color: var(--color-primary);">오늘 (${acc.nextDueDate})</span>`;
-      ddayText = `오늘 (${acc.nextDueDate})`;
     } else {
       ddayHtml = `<span style="color: var(--text-muted); font-size: 0.85rem;">해제 완료 (${acc.nextDueDate})</span>`;
-      ddayText = `해제 완료 (${acc.nextDueDate})`;
     }
     tdDday.innerHTML = ddayHtml;
     tr.appendChild(tdDday);
     
+    // (6) 관리
     const tdActions = document.createElement("td");
     tdActions.className = "table-actions";
     
@@ -681,7 +842,7 @@ function renderAccountsTable() {
     btnDelTable.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
-      if (confirm(`정말 ${acc.broker} (${acc.accountType}) 계좌 정보를 삭제하시겠습니까?`)) {
+      if (confirm(`정말 ${acc.broker} 계좌 정보를 삭제하시겠습니까?`)) {
         deleteAccount(acc.id);
         updateApp();
       }
@@ -697,20 +858,44 @@ function renderAccountsTable() {
     const card = document.createElement("div");
     card.className = "mobile-account-card";
     
+    let mobileAccountsHtml = "";
+    if (acc.accounts && acc.accounts.length > 0) {
+      mobileAccountsHtml = `
+        <div class="mobile-accounts-list">
+          ${acc.accounts.map(sub => `
+            <div class="mobile-account-item">
+              <span class="mobile-sub-type">${sub.accountType}</span>
+              ${sub.accountNumber ? `
+                <span class="mobile-sub-number" onclick="copyToClipboard('${sub.accountNumber}', '${sub.accountType}')" title="클릭하여 복사">
+                  ${sub.accountNumber} <i class="fa-regular fa-copy"></i>
+                </span>
+              ` : `
+                <span style="color: var(--text-muted); font-style: italic; font-size: 0.8rem;">번호 없음</span>
+              `}
+            </div>
+          `).join('')}
+        </div>
+      `;
+    } else {
+      mobileAccountsHtml = `
+        <div class="mobile-account-number" style="color: var(--text-muted); font-style: italic; font-size: 0.9rem;">
+          등록된 계좌가 없습니다.
+        </div>
+      `;
+    }
+
     card.innerHTML = `
       <div class="mobile-card-header">
         <span class="mobile-broker-name">${acc.broker}</span>
-        <span class="mobile-account-type">${acc.accountType}</span>
       </div>
       <div class="mobile-card-body">
-        <div class="mobile-account-number">
-          ${acc.accountNumber || '계좌번호 없음'}
-        </div>
+        ${mobileAccountsHtml}
         ${acc.memo ? `<div class="mobile-memo">${acc.memo.replace(/\n/g, '<br>')}</div>` : ''}
       </div>
       <div class="mobile-card-footer">
         <div class="mobile-dates">
           <div class="mobile-opened-date">개설일: ${acc.openedDate}</div>
+          <div class="mobile-dday-date">개설가능일: ${acc.nextDueDate} (D-${diff > 0 ? diff : diff === 0 ? 'Day' : '해제'})</div>
         </div>
         <div class="mobile-actions"></div>
       </div>
@@ -737,7 +922,7 @@ function renderAccountsTable() {
     btnDelMobile.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
-      if (confirm(`정말 ${acc.broker} (${acc.accountType}) 계좌 정보를 삭제하시겠습니까?`)) {
+      if (confirm(`정말 ${acc.broker} 계좌 정보를 삭제하시겠습니까?`)) {
         deleteAccount(acc.id);
         updateApp();
       }
@@ -806,8 +991,13 @@ function exportToCSV() {
   accounts.forEach(acc => {
     const openedDate = acc.openedDate;
     const broker = `"${acc.broker.replace(/"/g, '""')}"`;
-    const accountType = `"${acc.accountType.replace(/"/g, '""')}"`;
-    const accountNumber = `"${(acc.accountNumber || '').replace(/"/g, '""')}"`;
+    
+    // 다중 계좌 정보를 세미콜론(;) 구분자로 합산하여 컬럼 처리
+    const typesStr = acc.accounts ? acc.accounts.map(sub => sub.accountType).join("; ") : acc.accountType;
+    const numbersStr = acc.accounts ? acc.accounts.map(sub => sub.accountNumber || "번호 없음").join("; ") : acc.accountNumber;
+    
+    const accountType = `"${(typesStr || '').replace(/"/g, '""')}"`;
+    const accountNumber = `"${(numbersStr || '').replace(/"/g, '""')}"`;
     const nextDueDate = acc.nextDueDate;
     const memo = `"${(acc.memo || '').replace(/"/g, '""')}"`;
     

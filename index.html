@@ -153,50 +153,42 @@
           <input type="date" id="openedDate" required>
         </div>
 
-        <div class="form-row">
-          <div class="form-group">
-            <label for="brokerSelect">증권사명 <span class="required">*</span></label>
-            <select id="brokerSelect" required>
-              <option value="" disabled selected>선택하세요</option>
-              <option value="미래에셋증권">미래에셋증권</option>
-              <option value="한국투자증권">한국투자증권</option>
-              <option value="KB증권">KB증권</option>
-              <option value="NH투자증권">NH투자증권</option>
-              <option value="삼성증권">삼성증권</option>
-              <option value="신한투자증권">신한투자증권</option>
-              <option value="대신증권">대신증권</option>
-              <option value="하나증권">하나증권</option>
-              <option value="키움증권">키움증권</option>
-              <option value="유진투자증권">유진투자증권</option>
-              <option value="메리츠증권">메리츠증권</option>
-              <option value="신영증권">신영증권</option>
-              <option value="현대차증권">현대차증권</option>
-              <option value="DB금융투자">DB금융투자</option>
-              <option value="IBK투자증권">IBK투자증권</option>
-              <option value="토스증권">토스증권</option>
-              <option value="카카오페이증권">카카오페이증권</option>
-              <option value="custom">직접 입력...</option>
-            </select>
-            <input type="text" id="brokerInput" class="hidden-input" placeholder="증권사명을 입력하세요">
-          </div>
-
-          <div class="form-group">
-            <label for="accountTypeSelect">계좌 종류 <span class="required">*</span></label>
-            <select id="accountTypeSelect" required>
-              <option value="" disabled selected>선택하세요</option>
-              <option value="CMA">CMA</option>
-              <option value="위탁">위탁 (주식)</option>
-              <option value="ISA">ISA</option>
-              <option value="연금저축">연금저축</option>
-              <option value="custom">직접 입력...</option>
-            </select>
-            <input type="text" id="accountTypeInput" class="hidden-input" placeholder="계좌 종류를 입력하세요">
-          </div>
+        <div class="form-group">
+          <label for="brokerSelect">증권사명 <span class="required">*</span></label>
+          <select id="brokerSelect" required>
+            <option value="" disabled selected>선택하세요</option>
+            <option value="미래에셋증권">미래에셋증권</option>
+            <option value="한국투자증권">한국투자증권</option>
+            <option value="KB증권">KB증권</option>
+            <option value="NH투자증권">NH투자증권</option>
+            <option value="삼성증권">삼성증권</option>
+            <option value="신한투자증권">신한투자증권</option>
+            <option value="대신증권">대신증권</option>
+            <option value="하나증권">하나증권</option>
+            <option value="키움증권">키움증권</option>
+            <option value="유진투자증권">유진투자증권</option>
+            <option value="메리츠증권">메리츠증권</option>
+            <option value="신영증권">신영증권</option>
+            <option value="현대차증권">현대차증권</option>
+            <option value="DB금융투자">DB금융투자</option>
+            <option value="IBK투자증권">IBK투자증권</option>
+            <option value="토스증권">토스증권</option>
+            <option value="카카오페이증권">카카오페이증권</option>
+            <option value="custom">직접 입력...</option>
+          </select>
+          <input type="text" id="brokerInput" class="hidden-input" placeholder="증권사명을 입력하세요">
         </div>
 
-        <div class="form-group">
-          <label for="accountNumber">계좌번호</label>
-          <input type="text" id="accountNumber" placeholder="계좌번호를 입력하세요 (선택)">
+        <div class="form-group accounts-section">
+          <div class="accounts-section-header">
+            <label>계좌 정보 등록 <span class="required">*</span></label>
+            <button type="button" class="btn btn-secondary btn-sm" id="btnAddAccountRow">
+              <i class="fa-solid fa-plus"></i> 추가
+            </button>
+          </div>
+          <div id="accountsRowsContainer" class="accounts-rows-container">
+            <!-- Dynamic rows will be inserted dynamically by JS -->
+          </div>
         </div>
 
         <div class="form-group">
